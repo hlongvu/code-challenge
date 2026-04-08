@@ -23,7 +23,7 @@ func sum_to_n_b(n: number): number {
 }
 
 /**
- * Use recursion to add n to the sum of numbers from 1 to n-1.
+ * Use recursion to add n to the sum of numbers from 1 to n.
  * Complexity: O(n)
  * Space Complexity: O(n) due to call stack
  */
