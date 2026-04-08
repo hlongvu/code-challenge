@@ -46,7 +46,7 @@ sequenceDiagram
         Server->>DB: UPDATE users SET score = <new_score> WHERE id = <user_id>
         DB-->>Server: Final Score Saved
         
-        Server->>DB: INSERT INTO score_audit_logs (user_id, score_added, action_id)
+        Server->>DB: INSERT INTO score_audit_logs (user_id, action_type, score_added, action_id, final_score)
         DB-->>Server: Audit Log Saved
         
         Server->>Redis: ZREVRANGE global_scoreboard 0 9 WITHSCORES
@@ -96,7 +96,7 @@ To prevent malicious users from arbitrarily increasing their scores, we must imp
 All requests must include a valid JWT for authentication, validate api request comes from valid user.
 
 ### 5.2. Payload Signature (Make sure user's submitted data comes from correct clients): 
-- The client must sign the request payload (action_id + action_type + timestamp + score) using a cryptographic hash (e.g., HMAC-SHA256) with a secret key embedded (and obfuscated) in the client app. 
+- The client must sign the request payload (action_id + action_type + timestamp) using a cryptographic hash (e.g., HMAC-SHA256) with a secret key embedded (and obfuscated) in the client app. 
 - The server verifies this signature to ensure the request originated from the legitimate client application, not Postman or a script.
 
 ### 5.3. Replay Attack Prevention: 
