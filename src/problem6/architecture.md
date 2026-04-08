@@ -7,12 +7,13 @@ Main goals:
  - secure API endpoint for user to submit action 
  - updates the internal ranking
  - and pushes live updates to connected web clients
+ - secure against malicious users
 
 ## 2. Architecture & Flow of Execution
 
 The following sequence diagram illustrates the lifecycle of a score update:
 
-```
+```mermaid
 sequenceDiagram
     participant Client as Web Client
     participant Auth as API Gateway / Rate Limiter
