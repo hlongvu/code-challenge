@@ -10,9 +10,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging middleware
+// Request logging middleware (disabled in test environment)
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  if (process.env.NODE_ENV !== 'test') {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  }
   next();
 });
 
@@ -71,4 +73,9 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-startServer();
+// Only start the server if this file is run directly (not imported for testing)
+if (require.main === module) {
+  startServer();
+}
+
+export { app, startServer };
