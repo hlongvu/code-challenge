@@ -39,14 +39,14 @@ sequenceDiagram
     alt Invalid Signature / Cheat / Unauthorized
         Server-->>Client: 403 Forbidden / 401 Unauthorized
     else Valid Request
-        Server->>Redis: ZINCRBY global_scoreboard <points> <user_id>
+        Server->>Redis: ZINCRBY global_scoreboard <score> <user_id>
         Redis-->>Server: Return updated score (Write OK)
         
         Note over Server, DB: Persistent Storage Operations
         Server->>DB: UPDATE users SET score = <new_score> WHERE id = <user_id>
         DB-->>Server: Final Score Saved
         
-        Server->>DB: INSERT INTO score_audit_logs (user_id, points_added, action_id)
+        Server->>DB: INSERT INTO score_audit_logs (user_id, score_added, action_id)
         DB-->>Server: Audit Log Saved
         
         Server->>Redis: ZREVRANGE global_scoreboard 0 9 WITHSCORES
@@ -57,6 +57,8 @@ sequenceDiagram
         Server-->>Client: 200 OK (Update Successful)
     end
 ```
+
+Image preview: ![Diagram](diagram.png "Execution Flow")
 
 
 ## 3. Core Requirements & Technical Stack
@@ -77,7 +79,7 @@ sequenceDiagram
 {
   "action_id": "uuid-v4",
   "timestamp": 1712543247,
-  "points": 10,
+  "action_type: "finish_game",
   "signature": "a7d8e9f...[HMAC-SHA256 signature]..."
 }
 ```
@@ -94,7 +96,7 @@ To prevent malicious users from arbitrarily increasing their scores, we must imp
 All requests must include a valid JWT for authentication, validate api request comes from valid user.
 
 ### 5.2. Payload Signature (Make sure user's submitted data comes from correct clients): 
-- The client must sign the request payload (action_id + timestamp + points) using a cryptographic hash (e.g., HMAC-SHA256) with a secret key embedded (and obfuscated) in the client app. 
+- The client must sign the request payload (action_id + action_type + timestamp + score) using a cryptographic hash (e.g., HMAC-SHA256) with a secret key embedded (and obfuscated) in the client app. 
 - The server verifies this signature to ensure the request originated from the legitimate client application, not Postman or a script.
 
 ### 5.3. Replay Attack Prevention: 
@@ -104,3 +106,18 @@ The server must validate the timestamp (rejecting requests older than ~30 second
 Limit requests to some amount of actions per minute per user at the API Gateway level. Additional logic may need to cap user submission rate to lower than 10 actions under 1 minutes (base on real application logic).
 
 
+## 6. Improvement Notes
+
+### 6.1. Server-Side Action Validation: 
+Currently we only check for rate limiting of user's submissions.
+Improvement: Base on business logic, validate the sequence of action logs on the server to check for malicious attempt.
+
+### 6.2. Debouncing WebSocket Broadcasts: 
+If thousands of users are scoring simultaneously, broadcasting every single update will flood the WebSocket server. 
+Improvement: Implement a throttle/debounce mechanism on the server side to only broadcast the Top 10 state a maximum of once every 1 or 2 seconds.
+
+### 6.3. Redis Fallback: 
+We should handle the case of Redis failure, write score on database and read from database. This will result if degraded performance but will keep application running and won't lost user's score.
+
+### 6.4. Write behind Cache:
+Now we are writing to the database after redis write, this will be a bottle neck if the application scale up to millions of user. We can push DB update to a message queue and background workers to reduce write pressure.
